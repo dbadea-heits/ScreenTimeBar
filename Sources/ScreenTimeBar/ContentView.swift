@@ -30,6 +30,22 @@ struct ContentView: View {
     @EnvironmentObject var store: ScreenTimeStore
     @State private var route: Route = .main
 
+    /// The report shown in the top card: the browsed day if still present in the
+    /// current week, otherwise today (covers a selection that fell out of the
+    /// 7-day window after a date rollover).
+    private var displayedReport: DayReport? {
+        if let sel = store.selectedDay {
+            return store.week.first { $0.day == sel } ?? store.today
+        }
+        return store.today
+    }
+
+    /// True only while browsing a day other than today.
+    private var isBrowsingPast: Bool {
+        guard let sel = store.selectedDay else { return false }
+        return sel != store.today?.day
+    }
+
     var body: some View {
         Group {
             switch route {
@@ -60,13 +76,17 @@ struct ContentView: View {
                 }
                 ScrollView {
                     VStack(spacing: 0) {
-                        if let today = store.today {
-                            TodayCard(report: today)
+                        if let report = displayedReport {
+                            TodayCard(report: report)
                         } else {
                             loadingCard
                         }
                         Divider()
-                        WeekCard(week: store.week)
+                        WeekCard(
+                            week: store.week,
+                            selectedDay: store.selectedDay,
+                            onSelectDay: { store.selectedDay = $0 }
+                        )
                     }
                 }
                 .frame(maxHeight: 520)
@@ -82,7 +102,16 @@ struct ContentView: View {
             Text("Screen Time")
                 .font(.headline)
             Spacer(minLength: 8)
-            Text(longDate(store.today?.day ?? dayKeyFormatter.string(from: Date())))
+            if isBrowsingPast {
+                Button { store.selectedDay = nil } label: {
+                    Label("Today", systemImage: "chevron.left")
+                }
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundStyle(.tint)
+                .help("Back to today")
+            }
+            Text(longDate(displayedReport?.day ?? dayKeyFormatter.string(from: Date())))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

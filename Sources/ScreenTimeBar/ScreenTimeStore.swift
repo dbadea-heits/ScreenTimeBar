@@ -16,6 +16,10 @@ final class ScreenTimeStore: ObservableObject {
     @Published var phase: Phase = .idle
     @Published var lastUpdated: Date?
 
+    /// Day the user is browsing in the popover ("yyyy-MM-dd"), or nil for today.
+    /// View-only: the status-item label always reflects `today`, never this.
+    @Published var selectedDay: String?
+
     /// Set by `AppDelegate` to mirror the current score into the status item.
     var onLabelChange: ((_ title: String?, _ symbol: String) -> Void)?
 
@@ -45,6 +49,7 @@ final class ScreenTimeStore: ObservableObject {
     /// Re-reads the DB and re-scores today + the week. Keeps the last good data
     /// on screen while loading and on failure.
     func reload() {
+        selectedDay = nil
         if loading { return }
         loading = true
         phase = .loading
